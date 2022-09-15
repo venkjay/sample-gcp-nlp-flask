@@ -5,6 +5,10 @@ from flask_restx import Resource, Api
 from google.cloud import datastore
 from google.cloud import language_v1 as language
 import os
+from TopicAnalyser import TopicAnalyser
+import re
+import html
+
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "key.json"
 
@@ -48,6 +52,15 @@ api = Api(app)
 parser = api.parser()
 parser.add_argument("text", type=str, help="Text", location="form")
 
+def load_keywords():
+    kd = {}
+    with open('ESG_Keywords.txt') as f:
+        lines = f.readlines()
+    for l in filter(lambda l: not l.startswith("#") , lines):
+        kd.update(l = "")
+    return kd
+
+esg_keywords = load_keywords()
 
 @api.route("/api/text")
 class Text(Resource):
@@ -69,6 +82,7 @@ class Text(Resource):
                 "text": str(text_entity["text"]),
                 "timestamp": str(text_entity["timestamp"]),
                 "sentiment": str(text_entity["sentiment"]),
+                "topics": str(text_entity["topics"]),
             }
 
         return result
@@ -85,18 +99,27 @@ class Text(Resource):
         text = args["text"]
 
         # Get the sentiment score of the first sentence of the analysis (that's the [0] part)
-        sentiment = analyze_text_sentiment(text)[0].get("sentiment score")
+        sentiment = analyze_text_sentiment(text)
+        overall_sentiments = []
+        for sent in sentiment:
+            sl = sent.get("sentiment score")
 
-        # Assign a label based on the score
-        overall_sentiment = "unknown"
-        if sentiment > 0:
-            overall_sentiment = "positive"
-        if sentiment < 0:
-            overall_sentiment = "negative"
-        if sentiment == 0:
-            overall_sentiment = "neutral"
+            # Assign a label based on the score
+            overall_sentiment = "unknown"
+            if sl > 0:
+                overall_sentiment = "positive"
+            if sl < 0:
+                overall_sentiment = "negative"
+            if sl == 0:
+                overall_sentiment = "neutral"
+            overall_sentiments.append(overall_sentiment)
 
         current_datetime = datetime.now()
+
+        rds = []
+        rds.append(html.unescape(text))
+        topics = ""
+        # topics = TopicAnalyser(model_type = "nmf", data = rds, keywordfilter = esg_keywords).analyse()
 
         # The kind for the new entity. This is so all 'Sentences' can be queried.
         kind = "Sentences"
@@ -111,7 +134,8 @@ class Text(Resource):
         entity = datastore.Entity(key)
         entity["text"] = text
         entity["timestamp"] = current_datetime
-        entity["sentiment"] = overall_sentiment
+        entity["sentiment"] = overall_sentiments
+        entity["topics"] = topics
 
         # Save the new entity to Datastore.
         datastore_client.put(entity)
@@ -120,7 +144,8 @@ class Text(Resource):
         result[str(entity.key.id)] = {
             "text": text,
             "timestamp": str(current_datetime),
-            "sentiment": overall_sentiment,
+            "sentiment": overall_sentiments,
+            "topics": topics,
         }
         return result
 
