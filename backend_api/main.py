@@ -9,7 +9,6 @@ from TopicAnalyser import TopicAnalyser
 import re
 import html
 
-
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "key.json"
 
 """
@@ -97,6 +96,8 @@ class Text(Resource):
 
         args = parser.parse_args()
         text = args["text"]
+        
+        print(text)
 
         # Get the sentiment score of the first sentence of the analysis (that's the [0] part)
         sentiment = analyze_text_sentiment(text)
@@ -115,12 +116,9 @@ class Text(Resource):
             overall_sentiments.append(overall_sentiment)
 
         current_datetime = datetime.now()
-
-        rds = []
-        rds.append(html.unescape(text))
-        topics = ""
-        # topics = TopicAnalyser(model_type = "nmf", data = rds, keywordfilter = esg_keywords).analyse()
-
+        
+        topics = "" + TopicAnalyser(model_type = "nmf", data = text.split("  "), keywordfilter = esg_keywords).analyse()
+        print(topics)
         # The kind for the new entity. This is so all 'Sentences' can be queried.
         kind = "Sentences"
 
@@ -132,7 +130,7 @@ class Text(Resource):
 
         # Construct the new entity using the key. Set dictionary values for entity
         entity = datastore.Entity(key)
-        entity["text"] = text
+        entity["text"] = text[0:1499]
         entity["timestamp"] = current_datetime
         entity["sentiment"] = overall_sentiments
         entity["topics"] = topics

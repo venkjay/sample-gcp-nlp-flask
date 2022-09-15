@@ -16,11 +16,7 @@ class TopicAnalyser:
             return " ".join([feature_names[i] for i in topic.argsort()[:-no_top_words - 1:-1]])
 
     def analyse(self):
-        # TODO: participants should consider changing dataset to match the brief.
-        if (self.data == None):
-            dataset = fetch_20newsgroups(shuffle=True, random_state=1, remove=('headers', 'footers', 'quotes'))
-            self.documents = dataset.data
-
+        
         # HYPERPARAMETERS: Consider tuning
         no_features = 1000
         no_topics = 20
@@ -45,7 +41,8 @@ class TopicAnalyser:
             logging.exception("Invalid model_type: {}".format(self.model_type))
 
         # HYPERPARAMETER: Consider tuning
-        no_top_words = 20
+        no_top_words = 5
 
         topics = self.display_topics(model, tfidf_feature_names, no_top_words)        
-        return filter(lambda t: self.keywordfilter.get(t) != None, topics)
+        # return filter(lambda t: self.keywordfilter.get(t) != None, topics)
+        return topics
