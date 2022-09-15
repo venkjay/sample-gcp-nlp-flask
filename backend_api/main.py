@@ -130,7 +130,7 @@ class Text(Resource):
 
         # Construct the new entity using the key. Set dictionary values for entity
         entity = datastore.Entity(key)
-        entity["text"] = text[0:1499]
+        entity["text"] = text[0:1450]
         entity["timestamp"] = current_datetime
         entity["sentiment"] = overall_sentiments
         entity["topics"] = topics
